@@ -51,6 +51,7 @@ export default function InvoicePage() {
   const [taxRate, setTaxRate] = useState(0);
   const [discountType, setDiscountType] = useState<"percent" | "fixed">("percent");
   const [discountValue, setDiscountValue] = useState(0);
+  const [amountPaid, setAmountPaid] = useState(0);
   const [currency, setCurrency] = useState("USD");
   const [items, setItems] = useState<LineItem[]>([
     { id: crypto.randomUUID(), description: "", quantity: 1, price: 0 },
@@ -60,7 +61,7 @@ export default function InvoicePage() {
 
   const getFormData = (): InvoiceTemplate["data"] => ({
     userName, companyName, companyLogo, watermark, currency,
-    clientName, clientEmail, notes, taxRate, discountType, discountValue, items,
+    clientName, clientEmail, notes, taxRate, discountType, discountValue, amountPaid, items,
   });
 
   const handleSaveTemplate = (name: string) => {
@@ -81,6 +82,7 @@ export default function InvoicePage() {
     setTaxRate(d.taxRate);
     setDiscountType(d.discountType);
     setDiscountValue(d.discountValue);
+    setAmountPaid(d.amountPaid ?? d.due ?? 0);
     setItems(d.items);
     toast.success(`Template "${template.name}" loaded`);
   };
@@ -129,6 +131,7 @@ export default function InvoicePage() {
   const afterDiscount = Math.max(0, subtotal - discountAmount);
   const taxAmount = afterDiscount * (taxRate / 100);
   const total = afterDiscount + taxAmount;
+  const balanceDue = Math.max(0, total - (Number(amountPaid) || 0));
   const sym = currencies.find((c) => c.code === currency)?.symbol ?? "$";
 
   const capturePreview = useCallback(async () => {
@@ -340,6 +343,17 @@ export default function InvoicePage() {
                     </Button>
                   </div>
                 </div>
+                <div>
+                  <Label>Amount Paid</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(Number(e.target.value))}
+                    placeholder="0"
+                  />
+                </div>
               </CardContent>
             </Card>
 
@@ -364,23 +378,37 @@ export default function InvoicePage() {
               style={{ color: "#1a1a1a", fontFamily: "'Inter', sans-serif", minHeight: 600 }}
             >
               {/* Watermark */}
-              {watermark && companyName && (
+              {watermark && (companyLogo || companyName) && (
                 <div
                   className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden"
                   style={{ zIndex: 0 }}
                 >
-                  <span
-                    style={{
-                      fontSize: "6rem",
-                      fontWeight: 800,
-                      color: "rgba(0,0,0,0.04)",
-                      transform: "rotate(-30deg)",
-                      whiteSpace: "nowrap",
-                      userSelect: "none",
-                    }}
-                  >
-                    {companyName}
-                  </span>
+                  {companyLogo ? (
+                    <img
+                      src={companyLogo}
+                      alt="Watermark"
+                      style={{
+                        maxWidth: 320,
+                        maxHeight: 320,
+                        objectFit: "contain",
+                        opacity: 0.08,
+                        userSelect: "none",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: "6rem",
+                        fontWeight: 800,
+                        color: "rgba(0,0,0,0.04)",
+                        transform: "rotate(-30deg)",
+                        whiteSpace: "nowrap",
+                        userSelect: "none",
+                      }}
+                    >
+                      {companyName}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -476,6 +504,28 @@ export default function InvoicePage() {
                       <span style={{ fontWeight: 700 }}>Total</span>
                       <span style={{ fontWeight: 800, color: "#f97316" }}>{sym}{total.toFixed(2)}</span>
                     </div>
+                    {amountPaid > 0 && (
+                      <>
+                        <div className="flex justify-between" style={{ padding: "6px 0", fontSize: 13 }}>
+                          <span style={{ color: "#666" }}>Amount Paid</span>
+                          <span style={{ fontWeight: 600, color: "#16a34a" }}>{sym}{amountPaid.toFixed(2)}</span>
+                        </div>
+                        <div
+                          className="flex justify-between"
+                          style={{
+                            padding: "8px 0 0 0",
+                            borderTop: "1px dashed #e5e7eb",
+                            marginTop: 2,
+                            fontSize: 15,
+                          }}
+                        >
+                          <span style={{ fontWeight: 700 }}>Balance Due</span>
+                          <span style={{ fontWeight: 800, color: balanceDue > 0 ? "#ef4444" : "#16a34a" }}>
+                            {sym}{balanceDue.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
