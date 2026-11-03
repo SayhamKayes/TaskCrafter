@@ -16,6 +16,8 @@ export interface InvoiceTemplate {
     taxRate: number;
     discountType: "percent" | "fixed";
     discountValue: number;
+    due?: number;
+    amountPaid?: number;
     items: { id: string; description: string; quantity: number; price: number }[];
   };
 }
